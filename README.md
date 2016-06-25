@@ -73,4 +73,4 @@ let myCache = WCahce<DataRepresentable>(name: "myCache") // creates a winter cac
 
 ## License
 
-**Winter** is available under the MIT license. See the [LICENSE](LICENSE.md) file for more info.
+**Winter** is available under the MIT license. See the [LICENSE](LICENSE) file for more info.
