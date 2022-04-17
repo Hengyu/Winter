@@ -8,20 +8,20 @@
 
 import Foundation
 
-public enum ErrorCode: Int {
-    case ObjectNotFound
-    case EncodingFailed
+public enum WErrorCode: Int {
+    case objectNotFound
+    case encodingFailed
 }
 
-public class Error: NSError {
-    public init(code: Int, userInfo dict: [NSObject : AnyObject]? = [:]) {
+public class WError: NSError {
+    public init(code: Int, userInfo dict: [String: Any]? = [:]) {
         super.init(domain: "hengyu.Winter", code: code, userInfo: dict)
     }
-    
-    public convenience init(code: ErrorCode) {
+
+    public convenience init(code: WErrorCode) {
         self.init(code: code.rawValue)
     }
-    
+
     required public init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
     }

@@ -7,21 +7,29 @@
 //
 
 import Foundation
+#if os(macOS)
+import AppKit.NSImage
+#else
 import UIKit.UIImage
+#endif
+
+// swiftlint:disable type_name
 
 public protocol DataRepresentable {
-    associatedtype Element = Self
-    
-    static func decode(with data: Data) -> Element?
-    
+    associatedtype T = Self
+
+    static func decode(with data: Data) -> T?
+
     func encode() -> Data?
 }
+
+// swiftlint:enable type_name
 
 extension Data: DataRepresentable {
     public static func decode(with data: Data) -> Data? {
         return data
     }
-    
+
     public func encode() -> Data? {
         return self
     }
@@ -31,7 +39,7 @@ extension String: DataRepresentable {
     public static func decode(with data: Data) -> String? {
         return String(data: data, encoding: .utf8)
     }
-    
+
     public func encode() -> Data? {
         return data(using: .utf8)
     }
@@ -39,17 +47,36 @@ extension String: DataRepresentable {
 
 extension Date: DataRepresentable {
     public static func decode(with data: Data) -> Date? {
-        if let sinceRefRaw = String.decode(with: data), sinceRef = TimeInterval(sinceRefRaw) {
+        if let sinceRefRaw = String.decode(with: data), let sinceRef = TimeInterval(sinceRefRaw) {
             return Date(timeIntervalSinceReferenceDate: sinceRef)
         }
         return nil
     }
-    
+
     public func encode() -> Data? {
         let sinceRef = String(timeIntervalSinceReferenceDate)
         return sinceRef.encode()
     }
 }
+
+#if os(macOS)
+
+extension NSImage {
+    private static var decodingLock: NSLock = .init()
+
+    public class func decode(with data: Data) -> NSImage? {
+        decodingLock.lock()
+        let image = NSImage(data: data)
+        decodingLock.unlock()
+        return image
+    }
+
+    public func encode() -> Data? {
+        tiffRepresentation
+    }
+}
+
+#else
 
 extension UIImage {
     var hasAlpha: Bool {
@@ -68,17 +95,18 @@ extension UIImage {
 }
 
 extension UIImage: DataRepresentable {
-    private static var decodingLock = Lock()
-    
+    private static var decodingLock: NSLock = .init()
+
     public class func decode(with data: Data) -> UIImage? {
         decodingLock.lock()
         let image = UIImage(data: data)
         decodingLock.unlock()
         return image
     }
-    
+
     public func encode() -> Data? {
-        return hasAlpha ? UIImagePNGRepresentation(self) : UIImageJPEGRepresentation(self, 1.0)
+        return hasAlpha ? pngData() : jpegData(compressionQuality: 1.0)
     }
 }
 
+#endif

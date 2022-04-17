@@ -2,7 +2,7 @@
 ![Winter](winter.png)
 # Winter
 
-Winter is a lightweight *generic* cache framework written in __Swift 3.0__. The usage is quite simple.
+Winter is a lightweight *generic* cache framework written in __Swift 5__. The usage is quite simple.
 
 ```swift
 let cache = Winter.Cache<Data>(name: "data") // initialize a cache 
@@ -22,16 +22,11 @@ Winter provides a memory and disk cache for `UIImage`, `Data`, `Date`, `String` 
 `DataRepresentable`-compliant type.
 - Basic memory and disk cache functionality.
 - `DataRepresentable` protocol are implemented for `UIImage`, `Data`, and `String`.
-- iOS support (macOS, tvOS support in the future).
+- Support for iOS, tvOS, watchOS and macOS.
 
 ## Installation
 
-Manually:
-
-1. Drag `Winter.xcodeproj` to your project in the _Project Navigator_.
-2. Select your project and then your app target. Open the _Build Phases_ panel.
-3. Expand the _Target Dependencies_ group, and add `Winter.framework`.
-4. Click on the `+` button at the top left of the panel and select _New Copy Files Phase_. Set _Destination_ to _Frameworks_, and add `Winter.framework`.
+`Winter` could be installed via [Swift Package Manager](https://www.swift.org/package-manager/). Open Xcode and go to **File** -> **Add Packages...**, search `https://github.com/hengyu/Winter.git`, and add the package as one of your project's dependency.
 
 ### DataRepresentable protocol
 
@@ -57,20 +52,9 @@ extension GHMember: DataRepresentable {
 
 ## Requirements
 
-- iOS 8.0+
-- Swift 3.0
-
-Since 'NS' prefix has been removed from `Foundation` in `Swift 3`, using `Cache` directly will cause inconsistency. You may need to specify a framework prefix while using class `Cache`, or use the keyword `typealias`.
- 
-```swift
-let foundationCache = Foundation.Cache<Key, Object>(name: "fCache") // creates a foundation cache
-let winterCache = Winter.Cache<DataRepresentable>(name: "wCache") // creates a winter cache
-
-typelias WCache = Winter.Cache
-let myCache = WCahce<DataRepresentable>(name: "myCache") // creates a winter cache using typealias
-
-```
+- iOS 10.0+
+- Swift 5.0+
 
 ## License
 
-**Winter** is available under the MIT license. See the [LICENSE](LICENSE) file for more info.
+**Winter** is available under the [MIT License](LICENSE).
