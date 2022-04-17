@@ -2,7 +2,9 @@
 ![Winter](winter.png)
 # Winter
 
-Winter is a lightweight *generic* cache framework written in __Swift 5__. The usage is quite simple.
+Winter is a lightweight *generic* cache framework written in __Swift 5__. For the __Swift 3__ version, please refer to the [*master*](https://github.com/Hengyu/Winter/tree/master) branch. 
+
+The usage is quite simple, just import the `Winter` framework and create a cache object manager:
 
 ```swift
 let cache = Winter.Cache<Data>(name: "data") // initialize a cache 
