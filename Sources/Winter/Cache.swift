@@ -11,18 +11,21 @@ import Foundation
 import UIKit.UIApplication
 #endif
 
-internal struct CacheConstant {
+public struct CacheConstant {
     static let domain: String = "hengyu.Winter"
     static let basePath: String = {
         let cachesPath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0]
         let basePath = cachesPath + "/" + domain
         return basePath
     }()
+
+    public static let baseURL: URL = URL(fileURLWithPath: basePath, isDirectory: true)
 }
 
 public class Cache<ObjectType: DataRepresentable> where ObjectType.T == ObjectType {
     public let name: String
     public let capacity: UInt
+    public let directoryURL: URL
 
     private let diskCache: DiskCache<ObjectType>
     private let memoryCache: MemoryCache<ObjectType>
@@ -30,10 +33,15 @@ public class Cache<ObjectType: DataRepresentable> where ObjectType.T == ObjectTy
     public private(set) var dispatchQueue: DispatchQueue
     public var completionQueue: DispatchQueue = DispatchQueue.main
 
-    public init(name: String, capacity: UInt = .max) {
+    public init(
+        name: String,
+        directoryURL: URL = CacheConstant.baseURL,
+        capacity: UInt = .max
+    ) {
         self.name = name
         self.capacity = capacity
-        self.diskCache = DiskCache(name: name, capacity: capacity)
+        self.directoryURL = directoryURL
+        self.diskCache = DiskCache(name: name, directoryURL: directoryURL, capacity: capacity)
         self.memoryCache = MemoryCache(name: name, capacity: capacity)
         self.dispatchQueue = DispatchQueue(label: CacheConstant.domain + ".cache." + name, attributes: .concurrent)
         self.diskCache.completionQueue = dispatchQueue
@@ -46,6 +54,10 @@ public class Cache<ObjectType: DataRepresentable> where ObjectType.T == ObjectTy
             object: nil
         )
         #endif
+    }
+
+    public func dateOfObject(forKey key: String) -> Date? {
+        diskCache.dateOfObject(forKey: key)
     }
 
     public func object(forKey key: String, completion: @escaping (ObjectType?, Error?) -> Void) {

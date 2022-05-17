@@ -19,18 +19,35 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
     public private(set) var dispatchQueue: DispatchQueue
     public var completionQueue: DispatchQueue = .main
 
-    public init(name: String, capacity: UInt = UInt.max) {
-        self.path = CacheConstant.basePath + "/" + name
+    public init(
+        name: String,
+        directoryURL: URL = CacheConstant.baseURL,
+        capacity: UInt = UInt.max
+    ) {
+        self.path = directoryURL.appendingPathComponent(name, isDirectory: true).path
         self.name = name
         self.capacity = 0
+        // serial
         self.dispatchQueue = DispatchQueue(label: CacheConstant.domain + ".disk." + name)
     }
 
     public func controlSize() {
-        dispatchQueue.async(execute: {
+        dispatchQueue.async {
             self.calculateSize()
             self.removeExpiredItems()
-        })
+        }
+    }
+
+    open func dateOfObject(forKey key: String) -> Date? {
+        let url = fileURL(forKey: key)
+        let resourceKeys: Set<URLResourceKey> = [.contentModificationDateKey]
+        if
+            let values = try? url.resourceValues(forKeys: resourceKeys),
+            let date = values.contentModificationDate
+        {
+            return date
+        }
+        return nil
     }
 
     public func object(forKey key: String, completion: @escaping (ObjectType?, Error?) -> Void) {
@@ -76,22 +93,22 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
     }
 
     public func removeObject(forKey key: String, completion: (() -> Void)? = nil) {
-        dispatchQueue.async(execute: {
+        dispatchQueue.async {
             let url = self.fileURL(forKey: key)
             _ = try? self.removeItem(at: url)
-            self.completionQueue.async(execute: {
+            self.completionQueue.async {
                 completion?()
-            })
-        })
+            }
+        }
     }
 
     public func removeAllObjects(completion: (() -> Void)? = nil) {
-        dispatchQueue.async(execute: {
+        dispatchQueue.async {
             self.removeAllItems()
-            self.completionQueue.async(execute: {
+            self.completionQueue.async {
                 completion?()
-            })
-        })
+            }
+        }
     }
 
     private func calculateSize() {

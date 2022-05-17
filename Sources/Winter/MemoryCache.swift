@@ -34,40 +34,40 @@ public class MemoryCache<ObjectType: DataRepresentable> where ObjectType.T == Ob
     }
 
     public func object(forKey key: String, completion: @escaping (ObjectType?, Error?) -> Void) {
-        dispatchQueue.async(execute: {
+        dispatchQueue.async {
             let container = self.cache.object(forKey: key as NSString)
             let error: WError? = (container == nil) ? nil : WError(code: .objectNotFound)
             self.completionQueue.async {
                 completion(container?.object, error)
             }
-        })
+        }
     }
 
     public func setObject(_ obj: ObjectType, forKey key: String, completion: (() -> Void)? = nil) {
-        dispatchQueue.async(execute: {
+        dispatchQueue.async {
             let container = ObjectContainer(object: obj)
             self.cache.setObject(container, forKey: key as NSString)
-            self.completionQueue.async(execute: {
+            self.completionQueue.async {
                 completion?()
-            })
-        })
+            }
+        }
     }
 
     public func removeObject(forKey key: String, completion: (() -> Void)? = nil) {
-        dispatchQueue.async(execute: {
+        dispatchQueue.async {
             self.cache.removeObject(forKey: key as NSString)
-            self.completionQueue.async(execute: {
+            self.completionQueue.async {
                 completion?()
-            })
-        })
+            }
+        }
     }
 
     public func removeAllObjects(completion: (() -> Void)? = nil) {
-        dispatchQueue.async(execute: {
+        dispatchQueue.async {
             self.cache.removeAllObjects()
-            self.completionQueue.async(execute: {
+            self.completionQueue.async {
                 completion?()
-            })
-        })
+            }
+        }
     }
 }
