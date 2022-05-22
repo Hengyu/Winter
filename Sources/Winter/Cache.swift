@@ -24,7 +24,8 @@ public struct CacheConstant {
 
 public class Cache<ObjectType: DataRepresentable> where ObjectType.T == ObjectType {
     public let name: String
-    public let capacity: UInt
+    /// The maximum cache size in bytes. Default is 100MB.
+    public let capacity: Int
     public let directoryURL: URL
 
     private let diskCache: DiskCache<ObjectType>
@@ -36,7 +37,7 @@ public class Cache<ObjectType: DataRepresentable> where ObjectType.T == ObjectTy
     public init(
         name: String,
         directoryURL: URL = CacheConstant.baseURL,
-        capacity: UInt = .max
+        capacity: Int = 100 * 1024
     ) {
         self.name = name
         self.capacity = capacity

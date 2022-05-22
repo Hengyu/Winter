@@ -19,18 +19,18 @@ public class MemoryCache<ObjectType: DataRepresentable> where ObjectType.T == Ob
     private let cache: Foundation.NSCache<NSString, ObjectContainer<ObjectType>>
 
     public let name: String
-    public let capacity: UInt
+    public let capacity: Int
 
     public private(set) var dispatchQueue: DispatchQueue
     public var completionQueue: DispatchQueue = DispatchQueue.main
 
-    public init(name: String, capacity: UInt = UInt.max) {
+    public init(name: String, capacity: Int) {
         self.name = name
-        self.capacity = 0
+        self.capacity = capacity
         self.dispatchQueue = DispatchQueue(label: CacheConstant.domain + ".memory." + name)
         self.cache = Foundation.NSCache<NSString, ObjectContainer<ObjectType>>()
         self.cache.name = name
-        self.cache.countLimit = Int(capacity)
+        self.cache.countLimit = capacity
     }
 
     public func object(forKey key: String, completion: @escaping (ObjectType?, Error?) -> Void) {

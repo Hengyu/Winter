@@ -10,11 +10,11 @@ import Foundation
 
 public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == ObjectType {
     private let fileManager: FileManager = .init()
-    private var size: UInt = 0
+    private var size: Int = 0
 
     public let path: String
     public let name: String
-    public let capacity: UInt
+    public let capacity: Int
 
     public private(set) var dispatchQueue: DispatchQueue
     public var completionQueue: DispatchQueue = .main
@@ -22,7 +22,7 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
     public init(
         name: String,
         directoryURL: URL = CacheConstant.baseURL,
-        capacity: UInt = UInt.max
+        capacity: Int = Int.max
     ) {
         self.path = directoryURL.appendingPathComponent(name, isDirectory: true).path
         self.name = name
@@ -114,7 +114,7 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
     private func calculateSize() {
         let resourceKeys: Set<URLResourceKey> = [.totalFileAllocatedSizeKey]
 
-        var calculatedSize: UInt = 0
+        var calculatedSize: Int = 0
         do {
             let contents = try fileManager.contentsOfDirectory(atPath: path)
             for pathComponent in contents {
@@ -123,7 +123,7 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
                 do {
                     let resourceValues = try contentURL.resourceValues(forKeys: resourceKeys)
                     if let contentSize = resourceValues.totalFileAllocatedSize, contentSize > 0 {
-                        calculatedSize += UInt(contentSize)
+                        calculatedSize += Int(contentSize)
                     }
                 } catch {
                 }
@@ -140,22 +140,22 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
         else { return }
 
         let resourceKeys: Set<URLResourceKey> = [.contentModificationDateKey]
-        let sortedContents = contents.sorted(by: { lsh, rsh in
+        let sortedContents = contents.sorted { lsh, rsh in
             let lURL = URL(fileURLWithPath: lsh)
             let rURL = URL(fileURLWithPath: rsh)
 
             guard
                 let lValues = try? lURL.resourceValues(forKeys: resourceKeys),
-                    let lDate = lValues.contentModificationDate
+                let lDate = lValues.contentModificationDate
             else { return true }
 
             guard
                 let rValues = try? rURL.resourceValues(forKeys: resourceKeys),
-                    let rDate = rValues.contentModificationDate
+                let rDate = rValues.contentModificationDate
             else { return false }
 
             return lDate < rDate
-        })
+        }
         let sortedURLs = sortedContents.map { URL(fileURLWithPath: $0) }
         for url in sortedURLs where size > capacity {
             _ = try? removeItem(at: url)
@@ -186,8 +186,8 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
         let resourceKeys: Set<URLResourceKey> = [.totalFileAllocatedSizeKey]
         guard
             let values = try? url.resourceValues(forKeys: resourceKeys),
-                let size = values.totalFileAllocatedSize,
-                size > 0
+            let size = values.totalFileAllocatedSize,
+            size > 0
         else {
             try fileManager.removeItem(at: url)
             return
@@ -195,7 +195,7 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
 
         do {
             try fileManager.removeItem(at: url)
-            let substractedSize = UInt(size)
+            let substractedSize = size
             if substractedSize > self.size {
                 self.size = 0
             } else {
@@ -215,24 +215,24 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
     private func setData(_ data: Data, forKey key: String) throws {
         let fileUrl = fileURL(forKey: key)
         let resourceKeys: Set<URLResourceKey> = [.totalFileAllocatedSizeKey]
-        var previousSize: UInt = 0
+        var previousSize: Int = 0
         if
             let values = try? fileUrl.resourceValues(forKeys: resourceKeys),
             let oldSize = values.totalFileAllocatedSize,
             oldSize > 0
         {
-            previousSize = UInt(oldSize)
+            previousSize = oldSize
         }
 
         do {
             try data.write(to: fileUrl, options: .atomicWrite)
-            var currentSize: UInt = 0
+            var currentSize: Int = 0
             if
                 let values = try? fileUrl.resourceValues(forKeys: resourceKeys),
                 let newSize = values.totalFileAllocatedSize,
                 newSize > 0
             {
-                currentSize = UInt(newSize)
+                currentSize = newSize
             }
             size += currentSize
             if size > previousSize {
