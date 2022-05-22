@@ -55,7 +55,7 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
             do {
                 let data = try self.data(forKey: key)
                 let obj = ObjectType.decode(with: data)
-                let error: WError? = (obj == nil) ? nil : WError(code: .objectNotFound)
+                let error: WError? = (obj != nil) ? nil : WError(code: .objectNotFound)
                 self.completionQueue.async {
                     completion(obj, error)
                 }
