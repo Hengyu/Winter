@@ -27,21 +27,21 @@ public protocol DataRepresentable {
 
 extension Data: DataRepresentable {
     public static func decode(with data: Data) -> Data? {
-        return data
+        data
     }
 
     public func encode() -> Data? {
-        return self
+        self
     }
 }
 
 extension String: DataRepresentable {
     public static func decode(with data: Data) -> String? {
-        return String(data: data, encoding: .utf8)
+        String(data: data, encoding: .utf8)
     }
 
     public func encode() -> Data? {
-        return data(using: .utf8)
+        data(using: .utf8)
     }
 }
 
@@ -105,7 +105,7 @@ extension UIImage: DataRepresentable {
     }
 
     public func encode() -> Data? {
-        return hasAlpha ? pngData() : jpegData(compressionQuality: 1.0)
+        hasAlpha ? pngData() : jpegData(compressionQuality: 1.0)
     }
 }
 

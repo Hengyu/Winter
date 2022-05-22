@@ -10,6 +10,7 @@ import Foundation
 
 internal class ObjectContainer<T>: NSObject {
     let object: T
+
     init(object: T) {
         self.object = object
     }
