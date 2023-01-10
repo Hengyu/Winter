@@ -65,7 +65,7 @@ public final class Cache<ObjectType: DataRepresentable>: @unchecked Sendable whe
 
     public func object(forKey key: String, completion: @escaping (ObjectType?, Error?) -> Void) {
         memoryCache.object(forKey: key) { obj, _ in
-            if let obj = obj {
+            if let obj {
                 self.completionQueue.async { completion(obj, nil) }
             } else {
                 self.diskCache.object(forKey: key) { obj2, err2 in
@@ -76,7 +76,7 @@ public final class Cache<ObjectType: DataRepresentable>: @unchecked Sendable whe
     }
 
     public func setObject(_ obj: ObjectType, forKey key: String, completion: (() -> Void)? = nil) {
-        if let completion = completion {
+        if let completion {
             var count = 2
             diskCache.setObject(obj, forKey: key) {
                 count -= 1
@@ -97,7 +97,7 @@ public final class Cache<ObjectType: DataRepresentable>: @unchecked Sendable whe
     }
 
     public func removeObject(forKey key: String, completion: (() -> Void)? = nil) {
-        if let completion = completion {
+        if let completion {
             var count = 2
             diskCache.removeObject(forKey: key) {
                 count -= 1
