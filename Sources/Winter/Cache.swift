@@ -22,7 +22,7 @@ public struct CacheConstant {
     public static let baseURL: URL = URL(fileURLWithPath: basePath, isDirectory: true)
 }
 
-public class Cache<ObjectType: DataRepresentable> where ObjectType.T == ObjectType {
+public final class Cache<ObjectType: DataRepresentable>: @unchecked Sendable where ObjectType.T == ObjectType {
     public let name: String
     /// The maximum cache size in bytes. Default is 100MB.
     public let capacity: Int
@@ -31,13 +31,14 @@ public class Cache<ObjectType: DataRepresentable> where ObjectType.T == ObjectTy
     private let diskCache: DiskCache<ObjectType>
     private let memoryCache: MemoryCache<ObjectType>
 
-    public private(set) var dispatchQueue: DispatchQueue
-    public var completionQueue: DispatchQueue = DispatchQueue.main
+    public let dispatchQueue: DispatchQueue
+    public let completionQueue: DispatchQueue
 
     public init(
         name: String,
         directoryURL: URL = CacheConstant.baseURL,
-        capacity: Int = 100 * 1024
+        capacity: Int = 100 * 1024,
+        completionQueue: DispatchQueue = .main
     ) {
         self.name = name
         self.capacity = capacity
@@ -45,6 +46,7 @@ public class Cache<ObjectType: DataRepresentable> where ObjectType.T == ObjectTy
         self.diskCache = DiskCache(name: name, directoryURL: directoryURL, capacity: capacity)
         self.memoryCache = MemoryCache(name: name, capacity: capacity)
         self.dispatchQueue = DispatchQueue(label: CacheConstant.domain + ".cache." + name, attributes: .concurrent)
+        self.completionQueue = completionQueue
         self.diskCache.completionQueue = dispatchQueue
         self.memoryCache.completionQueue = dispatchQueue
         #if os(iOS) || os(tvOS)

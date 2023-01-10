@@ -16,7 +16,7 @@ internal class ObjectContainer<T>: NSObject {
     }
 }
 
-public class MemoryCache<ObjectType: DataRepresentable> where ObjectType.T == ObjectType {
+public final class MemoryCache<ObjectType: DataRepresentable>: @unchecked Sendable where ObjectType.T == ObjectType {
     private let cache: Foundation.NSCache<NSString, ObjectContainer<ObjectType>>
 
     public let name: String

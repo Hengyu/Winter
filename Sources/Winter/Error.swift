@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum WErrorCode: Int {
+public enum WErrorCode: Int, Sendable {
     case objectNotFound
     case encodingFailed
 }

@@ -8,7 +8,7 @@
 
 import Foundation
 
-public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == ObjectType {
+public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable where ObjectType.T == ObjectType {
     private let fileManager: FileManager = .init()
     private var size: Int = 0
 
@@ -38,7 +38,7 @@ public class DiskCache<ObjectType: DataRepresentable> where ObjectType.T == Obje
         }
     }
 
-    open func dateOfObject(forKey key: String) -> Date? {
+    public func dateOfObject(forKey key: String) -> Date? {
         let url = fileURL(forKey: key)
         let resourceKeys: Set<URLResourceKey> = [.contentModificationDateKey]
         if
