@@ -8,6 +8,8 @@ opt_in_rules:
   - multiline_parameters
   - multiline_parameters_brackets
   - sorted_imports
+
+analyzer_rules:
   - unused_import
 
 file_length:
