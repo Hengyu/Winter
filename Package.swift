@@ -6,11 +6,11 @@ import PackageDescription
 let package = Package(
     name: "Winter",
     platforms: [
-        .iOS(.v10),
-        .tvOS(.v10),
+        .iOS(.v11),
+        .tvOS(.v11),
         .watchOS(.v6),
         .macCatalyst(.v13),
-        .macOS(.v10_10)
+        .macOS(.v10_13)
     ],
     products: [
         .library(name: "Winter", targets: ["Winter"])
