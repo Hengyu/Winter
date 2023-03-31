@@ -1,30 +1,25 @@
-
-![Winter](winter.png)
 # Winter
 
-Winter is a lightweight *generic* cache framework written in __Swift 5.7__. For the __Swift 3__ version, please refer to the [*master*](https://github.com/Hengyu/Winter/tree/master) branch. 
+![](https://img.shields.io/badge/iOS-11.0%2B-green)
+![](https://img.shields.io/badge/macOS-10.13%2B-green)
+![](https://img.shields.io/badge/Swift-5-orange?logo=Swift&logoColor=white)
+![](https://img.shields.io/github/last-commit/hengyu/Winter)
 
-The usage is quite simple, just import the `Winter` framework and create a cache object manager:
+![Winter](winter.png)
 
-```swift
-let cache = Winter.Cache<Data>(name: "data") // initialize a cache 
-cache.setObject(myData, forKey: "example") // add an object
-cache.object(forKey: "example") { obj, err in
-	// get an object 
-	// ...
-}
-```
+**Winter** is a lightweight *generic* cache framework written in __Swift 5.7__. For the __Swift 3__ version, please refer to the [*master*](https://github.com/Hengyu/Winter/tree/master) branch.
 
-Winter provides a memory and disk cache for `UIImage`, `Data`, `Date`, `String` or any other type that can be read or written as data.
+## Table of contents
 
-## Key features
+* [Requirements](#requirements)
+* [Installation](#installation)
+* [Usage](#usage)
+* [License](#license) 
 
-- Generic `DataRepresentable` protocol to be able to cache any type you want.
-- `Cache` class to create a type safe cache storage by a given name for a specified
-`DataRepresentable`-compliant type.
-- Basic memory and disk cache functionality.
-- `DataRepresentable` protocol are implemented for `UIImage`, `Data`, and `String`.
-- Support for iOS, tvOS, watchOS and macOS.
+## Requirements
+
+- iOS 11.0+, tvOS 11.0+, macOS 10.13+, watchOS 6.0+
+- Swift 5.7
 
 ## Installation
 
@@ -51,11 +46,20 @@ extension GHMember: DataRepresentable {
 }    
 ```
 
+## Usage
 
-## Requirements
+The usage is quite simple, just import the `Winter` framework and create a cache object manager:
 
-- iOS 10.0+
-- Swift 5.7
+```swift
+let cache = Winter.Cache<Data>(name: "data") // initialize a cache 
+cache.setObject(myData, forKey: "example") // add an object
+cache.object(forKey: "example") { obj, err in
+    // get an object 
+    // ...
+}
+```
+
+Winter provides a memory and disk cache for `UIImage`, `Data`, `Date`, `String` or any other type that can be read or written as data.
 
 ## License
 
