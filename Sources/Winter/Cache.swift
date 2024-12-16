@@ -22,7 +22,7 @@ public struct CacheConstant {
     public static let baseURL: URL = URL(fileURLWithPath: basePath, isDirectory: true)
 }
 
-public final class Cache<ObjectType: DataRepresentable>: @unchecked Sendable where ObjectType.T == ObjectType {
+public final class Cache<ObjectType: DataRepresentable & Sendable>: Sendable where ObjectType.T == ObjectType {
     public let name: String
     /// The maximum cache size in bytes. Default is 100MB.
     public let capacity: Int
@@ -43,12 +43,10 @@ public final class Cache<ObjectType: DataRepresentable>: @unchecked Sendable whe
         self.name = name
         self.capacity = capacity
         self.directoryURL = directoryURL
-        self.diskCache = DiskCache(name: name, directoryURL: directoryURL, capacity: capacity)
-        self.memoryCache = MemoryCache(name: name, capacity: capacity)
+        self.diskCache = DiskCache(name: name, directoryURL: directoryURL, capacity: capacity, completionQueue: completionQueue)
+        self.memoryCache = MemoryCache(name: name, capacity: capacity, completionQueue: completionQueue)
         self.dispatchQueue = DispatchQueue(label: CacheConstant.domain + ".cache." + name, attributes: .concurrent)
         self.completionQueue = completionQueue
-        self.diskCache.completionQueue = dispatchQueue
-        self.memoryCache.completionQueue = dispatchQueue
         #if os(iOS) || os(tvOS)
         NotificationCenter.default.addObserver(
             self,
@@ -63,7 +61,7 @@ public final class Cache<ObjectType: DataRepresentable>: @unchecked Sendable whe
         diskCache.dateOfObject(forKey: key)
     }
 
-    public func object(forKey key: String, completion: @escaping (ObjectType?, Error?) -> Void) {
+    public func object(forKey key: String, completion: @escaping @Sendable (ObjectType?, Error?) -> Void) {
         memoryCache.object(forKey: key) { obj, _ in
             if let obj {
                 self.completionQueue.async { completion(obj, nil) }
@@ -75,63 +73,54 @@ public final class Cache<ObjectType: DataRepresentable>: @unchecked Sendable whe
         }
     }
 
-    public func setObject(_ obj: ObjectType, forKey key: String, completion: (() -> Void)? = nil) {
+    public func setObject(_ obj: ObjectType, forKey key: String, completion: (@Sendable () -> Void)? = nil) {
         if let completion {
-            var count = 2
+            let group = DispatchGroup()
+            group.enter()
             diskCache.setObject(obj, forKey: key) {
-                count -= 1
-                if count == 0 {
-                    self.completionQueue.async(execute: completion)
-                }
+                group.enter()
             }
+            group.enter()
             memoryCache.setObject(obj, forKey: key) {
-                count -= 1
-                if count == 0 {
-                    self.completionQueue.async(execute: completion)
-                }
+                group.leave()
             }
+            group.notify(queue: completionQueue, execute: completion)
         } else {
             diskCache.setObject(obj, forKey: key)
             memoryCache.setObject(obj, forKey: key)
         }
     }
 
-    public func removeObject(forKey key: String, completion: (() -> Void)? = nil) {
+    public func removeObject(forKey key: String, completion: (@Sendable () -> Void)? = nil) {
         if let completion {
-            var count = 2
+            let group = DispatchGroup()
+            group.enter()
             diskCache.removeObject(forKey: key) {
-                count -= 1
-                if count == 0 {
-                    self.completionQueue.async(execute: completion)
-                }
+                group.leave()
             }
+            group.enter()
             memoryCache.removeObject(forKey: key) {
-                count -= 1
-                if count == 0 {
-                    self.completionQueue.async(execute: completion)
-                }
+                group.leave()
             }
+            group.notify(queue: completionQueue, execute: completion)
         } else {
             diskCache.removeObject(forKey: key)
             memoryCache.removeObject(forKey: key)
         }
     }
 
-    public func removeAllObjects(completion: (() -> Void)? = nil) {
+    public func removeAllObjects(completion: (@Sendable () -> Void)? = nil) {
         if let completion = completion {
-            var count = 2
+            let group = DispatchGroup()
+            group.enter()
             diskCache.removeAllObjects {
-                count -= 1
-                if count == 0 {
-                    self.completionQueue.async(execute: completion)
-                }
+                group.leave()
             }
+            group.enter()
             memoryCache.removeAllObjects {
-                count -= 1
-                if count == 0 {
-                    self.completionQueue.async(execute: completion)
-                }
+                group.leave()
             }
+            group.notify(queue: completionQueue, execute: completion)
         } else {
             diskCache.removeAllObjects()
             memoryCache.removeAllObjects()

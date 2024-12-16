@@ -8,7 +8,7 @@
 
 import Foundation
 
-internal class ObjectContainer<T>: NSObject {
+internal final class ObjectContainer<T>: NSObject {
     let object: T
 
     init(object: T) {
@@ -16,25 +16,27 @@ internal class ObjectContainer<T>: NSObject {
     }
 }
 
-public final class MemoryCache<ObjectType: DataRepresentable>: @unchecked Sendable where ObjectType.T == ObjectType {
-    private let cache: Foundation.NSCache<NSString, ObjectContainer<ObjectType>>
+extension ObjectContainer: Sendable where T: Sendable { }
+
+public final class MemoryCache<ObjectType: DataRepresentable & Sendable>: Sendable where ObjectType.T == ObjectType {
+    nonisolated(unsafe) private let cache: Foundation.NSCache<NSString, ObjectContainer<ObjectType>>
 
     public let name: String
     public let capacity: Int
+    public let dispatchQueue: DispatchQueue
+    public let completionQueue: DispatchQueue
 
-    public private(set) var dispatchQueue: DispatchQueue
-    public var completionQueue: DispatchQueue = DispatchQueue.main
-
-    public init(name: String, capacity: Int) {
+    public init(name: String, capacity: Int, completionQueue: DispatchQueue = .main) {
         self.name = name
         self.capacity = capacity
         self.dispatchQueue = DispatchQueue(label: CacheConstant.domain + ".memory." + name)
+        self.completionQueue = completionQueue
         self.cache = Foundation.NSCache<NSString, ObjectContainer<ObjectType>>()
         self.cache.name = name
         self.cache.countLimit = capacity
     }
 
-    public func object(forKey key: String, completion: @escaping (ObjectType?, Error?) -> Void) {
+    public func object(forKey key: String, completion: @escaping @Sendable (ObjectType?, Error?) -> Void) {
         dispatchQueue.async {
             let container = self.cache.object(forKey: key as NSString)
             let error: WError? = (container != nil) ? nil : WError(code: .objectNotFound)
@@ -44,7 +46,7 @@ public final class MemoryCache<ObjectType: DataRepresentable>: @unchecked Sendab
         }
     }
 
-    public func setObject(_ obj: ObjectType, forKey key: String, completion: (() -> Void)? = nil) {
+    public func setObject(_ obj: ObjectType, forKey key: String, completion: (@Sendable () -> Void)? = nil) {
         dispatchQueue.async {
             let container = ObjectContainer(object: obj)
             self.cache.setObject(container, forKey: key as NSString)
@@ -54,7 +56,7 @@ public final class MemoryCache<ObjectType: DataRepresentable>: @unchecked Sendab
         }
     }
 
-    public func removeObject(forKey key: String, completion: (() -> Void)? = nil) {
+    public func removeObject(forKey key: String, completion: (@Sendable () -> Void)? = nil) {
         dispatchQueue.async {
             self.cache.removeObject(forKey: key as NSString)
             self.completionQueue.async {
@@ -63,7 +65,7 @@ public final class MemoryCache<ObjectType: DataRepresentable>: @unchecked Sendab
         }
     }
 
-    public func removeAllObjects(completion: (() -> Void)? = nil) {
+    public func removeAllObjects(completion: (@Sendable () -> Void)? = nil) {
         dispatchQueue.async {
             self.cache.removeAllObjects()
             self.completionQueue.async {

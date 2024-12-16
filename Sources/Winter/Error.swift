@@ -13,7 +13,7 @@ public enum WErrorCode: Int, Sendable {
     case encodingFailed
 }
 
-public class WError: NSError {
+public final class WError: NSError, @unchecked Sendable {
     public init(code: Int, userInfo dict: [String: Any]? = [:]) {
         super.init(domain: "hengyu.Winter", code: code, userInfo: dict)
     }

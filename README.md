@@ -7,7 +7,7 @@
 
 ![Winter](winter.png)
 
-**Winter** is a lightweight *generic* cache framework written in __Swift 5.7__. For the __Swift 3__ version, please refer to the [*master*](https://github.com/Hengyu/Winter/tree/master) branch.
+**Winter** is a lightweight *generic* cache framework written in __Swift 6.0__. For the __Swift 3__ version, please refer to the [*master*](https://github.com/Hengyu/Winter/tree/master) branch.
 
 ## Table of contents
 
@@ -19,7 +19,7 @@
 ## Requirements
 
 - iOS 11.0+, tvOS 11.0+, macOS 10.13+, watchOS 6.0+
-- Swift 5.7
+- Swift 6.0
 
 ## Installation
 

@@ -8,27 +8,28 @@
 
 import Foundation
 
-public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable where ObjectType.T == ObjectType {
-    private let fileManager: FileManager = .init()
-    private var size: Int = 0
+public final class DiskCache<ObjectType: DataRepresentable & Sendable>: Sendable where ObjectType.T == ObjectType {
+    nonisolated(unsafe) private let fileManager: FileManager = .init()
+    nonisolated(unsafe) private var cacheSize: Int = 0
 
     public let path: String
     public let name: String
     public let capacity: Int
-
-    public private(set) var dispatchQueue: DispatchQueue
-    public var completionQueue: DispatchQueue = .main
+    public let dispatchQueue: DispatchQueue
+    public let completionQueue: DispatchQueue
 
     public init(
         name: String,
         directoryURL: URL = CacheConstant.baseURL,
-        capacity: Int = Int.max
+        capacity: Int = Int.max,
+        completionQueue: DispatchQueue = .main
     ) {
         self.path = directoryURL.appendingPathComponent(name, isDirectory: true).path
         self.name = name
         self.capacity = 0
         // serial
         self.dispatchQueue = DispatchQueue(label: CacheConstant.domain + ".disk." + name)
+        self.completionQueue = completionQueue
     }
 
     public func controlSize() {
@@ -50,7 +51,7 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
         return nil
     }
 
-    public func object(forKey key: String, completion: @escaping (ObjectType?, Error?) -> Void) {
+    public func object(forKey key: String, completion: @escaping @Sendable (ObjectType?, Error?) -> Void) {
         dispatchQueue.async {
             do {
                 let data = try self.data(forKey: key)
@@ -67,7 +68,7 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
         }
     }
 
-    public func setObject(_ obj: ObjectType, forKey key: String, completion: (() -> Void)? = nil) {
+    public func setObject(_ obj: ObjectType, forKey key: String, completion: (@Sendable () -> Void)? = nil) {
         dispatchQueue.async {
             var isDirectory = ObjCBool(false)
             if !self.fileManager.fileExists(atPath: self.path, isDirectory: &isDirectory)
@@ -92,7 +93,7 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
         }
     }
 
-    public func removeObject(forKey key: String, completion: (() -> Void)? = nil) {
+    public func removeObject(forKey key: String, completion: (@Sendable () -> Void)? = nil) {
         dispatchQueue.async {
             let url = self.fileURL(forKey: key)
             _ = try? self.removeItem(at: url)
@@ -102,7 +103,7 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
         }
     }
 
-    public func removeAllObjects(completion: (() -> Void)? = nil) {
+    public func removeAllObjects(completion: (@Sendable () -> Void)? = nil) {
         dispatchQueue.async {
             self.removeAllItems()
             self.completionQueue.async {
@@ -130,12 +131,12 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
             }
         } catch {
         }
-        size = calculatedSize
+        cacheSize = calculatedSize
     }
 
     private func removeExpiredItems() {
         guard
-            size > capacity,
+            cacheSize > capacity,
             let contents = try? fileManager.contentsOfDirectory(atPath: path)
         else { return }
 
@@ -157,7 +158,7 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
             return lDate < rDate
         }
         let sortedURLs = sortedContents.map { URL(fileURLWithPath: $0) }
-        for url in sortedURLs where size > capacity {
+        for url in sortedURLs where cacheSize > capacity {
             _ = try? removeItem(at: url)
         }
     }
@@ -177,7 +178,7 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
                 let contentURL = URL(fileURLWithPath: contentPath)
                 _ = try? fileManager.removeItem(at: contentURL)
             }
-            self.size = 0
+            self.cacheSize = 0
         } catch {
         }
     }
@@ -196,10 +197,10 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
         do {
             try fileManager.removeItem(at: url)
             let substractedSize = size
-            if substractedSize > self.size {
-                self.size = 0
+            if substractedSize > self.cacheSize {
+                self.cacheSize = 0
             } else {
-                self.size -= substractedSize
+                self.cacheSize -= substractedSize
             }
         } catch {
             throw error
@@ -234,11 +235,11 @@ public final class DiskCache<ObjectType: DataRepresentable>: @unchecked Sendable
             {
                 currentSize = newSize
             }
-            size += currentSize
-            if size > previousSize {
-                size -= previousSize
+            cacheSize += currentSize
+            if cacheSize > previousSize {
+                cacheSize -= previousSize
             } else {
-                size = 0
+                cacheSize = 0
             }
         } catch {
             throw error

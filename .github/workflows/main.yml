@@ -10,11 +10,11 @@ jobs:
   main:
     runs-on: macos-latest
     steps:
-      - uses: swift-actions/setup-swift@v1.22.0
+      - uses: swift-actions/setup-swift@v2
         with:
-          swift-version: "5.7.0"
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+          swift-version: "5.10.0"
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: .build
           key: ${{ runner.os }}-Winter-${{ hashFiles('**/Package.resolved') }}

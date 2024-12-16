@@ -62,7 +62,7 @@ extension Date: DataRepresentable {
 #if os(macOS)
 
 extension NSImage {
-    private static var decodingLock: NSLock = .init()
+    private static let decodingLock: NSLock = .init()
 
     public class func decode(with data: Data) -> NSImage? {
         decodingLock.lock()
@@ -95,7 +95,7 @@ extension UIImage {
 }
 
 extension UIImage: DataRepresentable {
-    private static var decodingLock: NSLock = .init()
+    private static let decodingLock: NSLock = .init()
 
     public class func decode(with data: Data) -> UIImage? {
         decodingLock.lock()
