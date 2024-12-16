@@ -56,9 +56,8 @@ public final class DiskCache<ObjectType: DataRepresentable & Sendable>: Sendable
             do {
                 let data = try self.data(forKey: key)
                 let obj = ObjectType.decode(with: data)
-                let error: WError? = (obj != nil) ? nil : WError(code: .objectNotFound)
                 self.completionQueue.async {
-                    completion(obj, error)
+                    completion(obj, nil)
                 }
             } catch {
                 self.completionQueue.async {
@@ -68,46 +67,125 @@ public final class DiskCache<ObjectType: DataRepresentable & Sendable>: Sendable
         }
     }
 
-    public func setObject(_ obj: ObjectType, forKey key: String, completion: (@Sendable () -> Void)? = nil) {
-        dispatchQueue.async {
-            var isDirectory = ObjCBool(false)
-            if !self.fileManager.fileExists(atPath: self.path, isDirectory: &isDirectory)
-                || isDirectory.boolValue == false {
-                try? self.fileManager.createDirectory(
-                    atPath: self.path,
-                    withIntermediateDirectories: true,
-                    attributes: nil
-                )
-            }
-            if let data = obj.encode() {
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func object(forKey key: String) async throws -> ObjectType? {
+        try await withUnsafeThrowingContinuation { continuation in
+            dispatchQueue.async {
                 do {
-                    try self.setData(data, forKey: key)
+                    let data = try self.data(forKey: key)
+                    if let obj = ObjectType.decode(with: data) {
+                        continuation.resume(returning: obj)
+                    } else {
+                        continuation.resume(throwing: WError(code: .decodingFailed))
+                    }
                 } catch {
+                    continuation.resume(returning: nil)
                 }
-            } else {
-                // let error = WError(code: .encodingFailed)
-            }
-            self.completionQueue.async {
-                completion?()
             }
         }
     }
 
-    public func removeObject(forKey key: String, completion: (@Sendable () -> Void)? = nil) {
+    public func setObject(_ object: ObjectType, forKey key: String, completion: (@Sendable (Error?) -> Void)? = nil) {
+        dispatchQueue.async {
+            do {
+                try self.createDirectoryIfNeeded()
+                if let data = object.encode() {
+                    try self.setData(data, forKey: key)
+                    self.completionQueue.async {
+                        completion?(nil)
+                    }
+                } else {
+                    self.completionQueue.async {
+                        completion?(WError(code: .encodingFailed))
+                    }
+                }
+            } catch {
+                self.completionQueue.async {
+                    completion?(error)
+                }
+            }
+        }
+    }
+
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func setObject(_ object: ObjectType, forKey key: String) async throws {
+        try await withUnsafeThrowingContinuation { (continuation: UnsafeContinuation<Void, Error>) in
+            dispatchQueue.async {
+                do {
+                    try self.createDirectoryIfNeeded()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+
+                if let data = object.encode() {
+                    do {
+                        try self.setData(data, forKey: key)
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                } else {
+                    continuation.resume(throwing: WError(code: .encodingFailed))
+                }
+            }
+        }
+    }
+
+    public func removeObject(forKey key: String, completion: (@Sendable (Error?) -> Void)? = nil) {
         dispatchQueue.async {
             let url = self.fileURL(forKey: key)
-            _ = try? self.removeItem(at: url)
-            self.completionQueue.async {
-                completion?()
+            do {
+                try self.removeItem(at: url)
+                self.completionQueue.async {
+                    completion?(nil)
+                }
+            } catch {
+                self.completionQueue.async {
+                    completion?(error)
+                }
             }
         }
     }
 
-    public func removeAllObjects(completion: (@Sendable () -> Void)? = nil) {
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func removeObject(forKey key: String) async throws {
+        try await withUnsafeThrowingContinuation { (continuation: UnsafeContinuation<Void, Error>) in
+            dispatchQueue.async {
+                let url = self.fileURL(forKey: key)
+                do {
+                    try self.removeItem(at: url)
+                    continuation.resume(returning: ())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    public func removeAllObjects(completion: (@Sendable (Error?) -> Void)? = nil) {
         dispatchQueue.async {
-            self.removeAllItems()
-            self.completionQueue.async {
-                completion?()
+            do {
+                try self.removeAllItems()
+                self.completionQueue.async {
+                    completion?(nil)
+                }
+            } catch {
+                self.completionQueue.async {
+                    completion?(error)
+                }
+            }
+        }
+    }
+
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func removeAllObjects() async throws {
+        try await withUnsafeThrowingContinuation { (continuation: UnsafeContinuation<Void, Error>) in
+            dispatchQueue.async {
+                do {
+                    try self.removeAllItems()
+                    continuation.resume(returning: ())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
             }
         }
     }
@@ -170,17 +248,14 @@ public final class DiskCache<ObjectType: DataRepresentable & Sendable>: Sendable
         return url
     }
 
-    private func removeAllItems() {
-        do {
-            let contents = try fileManager.contentsOfDirectory(atPath: path)
-            for pathComponent in contents {
-                let contentPath = (path as NSString).appendingPathComponent(pathComponent)
-                let contentURL = URL(fileURLWithPath: contentPath)
-                _ = try? fileManager.removeItem(at: contentURL)
-            }
-            self.cacheSize = 0
-        } catch {
+    private func removeAllItems() throws {
+        let contents = try fileManager.contentsOfDirectory(atPath: path)
+        for pathComponent in contents {
+            let contentPath = (path as NSString).appendingPathComponent(pathComponent)
+            let contentURL = URL(fileURLWithPath: contentPath)
+            _ = try? fileManager.removeItem(at: contentURL)
         }
+        self.cacheSize = 0
     }
 
     private func removeItem(at url: URL) throws {
@@ -243,6 +318,14 @@ public final class DiskCache<ObjectType: DataRepresentable & Sendable>: Sendable
             }
         } catch {
             throw error
+        }
+    }
+
+    private func createDirectoryIfNeeded() throws {
+        var isDirectory = ObjCBool(false)
+        if !fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+            || !isDirectory.boolValue {
+            try fileManager.createDirectory(atPath: path, withIntermediateDirectories: true)
         }
     }
 }

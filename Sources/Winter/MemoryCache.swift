@@ -36,12 +36,21 @@ public final class MemoryCache<ObjectType: DataRepresentable & Sendable>: Sendab
         self.cache.countLimit = capacity
     }
 
-    public func object(forKey key: String, completion: @escaping @Sendable (ObjectType?, Error?) -> Void) {
+    public func object(forKey key: String, completion: @escaping @Sendable (ObjectType?) -> Void) {
         dispatchQueue.async {
             let container = self.cache.object(forKey: key as NSString)
-            let error: WError? = (container != nil) ? nil : WError(code: .objectNotFound)
             self.completionQueue.async {
-                completion(container?.object, error)
+                completion(container?.object)
+            }
+        }
+    }
+
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func object(forKey key: String) async -> ObjectType? {
+        await withCheckedContinuation { continuation in
+            dispatchQueue.async {
+                let container = self.cache.object(forKey: key as NSString)
+                continuation.resume(returning: container?.object)
             }
         }
     }
@@ -56,6 +65,17 @@ public final class MemoryCache<ObjectType: DataRepresentable & Sendable>: Sendab
         }
     }
 
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func setObject(_ obj: ObjectType, forKey key: String) async {
+        await withUnsafeContinuation { continuation in
+            dispatchQueue.async {
+                let container = ObjectContainer(object: obj)
+                self.cache.setObject(container, forKey: key as NSString)
+                continuation.resume(returning: ())
+            }
+        }
+    }
+
     public func removeObject(forKey key: String, completion: (@Sendable () -> Void)? = nil) {
         dispatchQueue.async {
             self.cache.removeObject(forKey: key as NSString)
@@ -65,11 +85,31 @@ public final class MemoryCache<ObjectType: DataRepresentable & Sendable>: Sendab
         }
     }
 
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func removeObject(forKey key: String) async {
+        await withUnsafeContinuation { continuation in
+            dispatchQueue.async {
+                self.cache.removeObject(forKey: key as NSString)
+                continuation.resume(returning: ())
+            }
+        }
+    }
+
     public func removeAllObjects(completion: (@Sendable () -> Void)? = nil) {
         dispatchQueue.async {
             self.cache.removeAllObjects()
             self.completionQueue.async {
                 completion?()
+            }
+        }
+    }
+
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func removeAllObjects() async {
+        await withUnsafeContinuation { continuation in
+            dispatchQueue.async {
+                self.cache.removeAllObjects()
+                continuation.resume(returning: ())
             }
         }
     }

@@ -47,7 +47,7 @@ public final class Cache<ObjectType: DataRepresentable & Sendable>: Sendable whe
         self.memoryCache = MemoryCache(name: name, capacity: capacity, completionQueue: completionQueue)
         self.dispatchQueue = DispatchQueue(label: CacheConstant.domain + ".cache." + name, attributes: .concurrent)
         self.completionQueue = completionQueue
-        #if os(iOS) || os(tvOS)
+        #if os(iOS) || os(tvOS) || os(watchOS)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(Cache.applicationDidReceiveMemoryWarning),
@@ -62,14 +62,23 @@ public final class Cache<ObjectType: DataRepresentable & Sendable>: Sendable whe
     }
 
     public func object(forKey key: String, completion: @escaping @Sendable (ObjectType?, Error?) -> Void) {
-        memoryCache.object(forKey: key) { obj, _ in
+        memoryCache.object(forKey: key) { obj in
             if let obj {
                 self.completionQueue.async { completion(obj, nil) }
             } else {
-                self.diskCache.object(forKey: key) { obj2, err2 in
-                    self.completionQueue.async { completion(obj2, err2) }
+                self.diskCache.object(forKey: key) { obj2, error in
+                    self.completionQueue.async { completion(obj2, error) }
                 }
             }
+        }
+    }
+
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func object(forKey key: String) async throws -> ObjectType? {
+        if let object = await memoryCache.object(forKey: key) {
+            return object
+        } else {
+            return try await diskCache.object(forKey: key)
         }
     }
 
@@ -77,7 +86,7 @@ public final class Cache<ObjectType: DataRepresentable & Sendable>: Sendable whe
         if let completion {
             let group = DispatchGroup()
             group.enter()
-            diskCache.setObject(obj, forKey: key) {
+            diskCache.setObject(obj, forKey: key) { _ in
                 group.enter()
             }
             group.enter()
@@ -91,11 +100,17 @@ public final class Cache<ObjectType: DataRepresentable & Sendable>: Sendable whe
         }
     }
 
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func setObject(_ object: ObjectType, forKey key: String) async throws {
+        try await diskCache.setObject(object, forKey: key)
+        await memoryCache.setObject(object, forKey: key)
+    }
+
     public func removeObject(forKey key: String, completion: (@Sendable () -> Void)? = nil) {
         if let completion {
             let group = DispatchGroup()
             group.enter()
-            diskCache.removeObject(forKey: key) {
+            diskCache.removeObject(forKey: key) { _ in
                 group.leave()
             }
             group.enter()
@@ -109,11 +124,17 @@ public final class Cache<ObjectType: DataRepresentable & Sendable>: Sendable whe
         }
     }
 
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func removeObject(forKey key: String) async throws {
+        try await diskCache.removeObject(forKey: key)
+        await memoryCache.removeObject(forKey: key)
+    }
+
     public func removeAllObjects(completion: (@Sendable () -> Void)? = nil) {
         if let completion = completion {
             let group = DispatchGroup()
             group.enter()
-            diskCache.removeAllObjects {
+            diskCache.removeAllObjects { _ in
                 group.leave()
             }
             group.enter()
@@ -125,6 +146,12 @@ public final class Cache<ObjectType: DataRepresentable & Sendable>: Sendable whe
             diskCache.removeAllObjects()
             memoryCache.removeAllObjects()
         }
+    }
+
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+    public func removeAllObjects() async throws {
+        try await diskCache.removeAllObjects()
+        await memoryCache.removeAllObjects()
     }
 
     @objc

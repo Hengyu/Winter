@@ -11,6 +11,7 @@ import Foundation
 public enum WErrorCode: Int, Sendable {
     case objectNotFound
     case encodingFailed
+    case decodingFailed
 }
 
 public final class WError: NSError, @unchecked Sendable {
